@@ -1,0 +1,44 @@
+# Allow only production build inputs and the explicit operations scripts.
+**
+!package.json
+!package-lock.json
+!next.config.ts
+!next-env.d.ts
+!tsconfig.json
+!prisma.config.ts
+!src/
+!src/**
+!prisma/
+!prisma/**
+!scripts/
+scripts/*
+!scripts/docker/
+!scripts/docker/**
+!public/
+!public/**
+
+# These exclusions apply even beneath an allowed source directory. Example
+# env files are excluded too; production configuration is runtime-only.
+.env*
+**/.env*
+**/.npmrc
+**/.yarnrc*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/node_modules
+**/.next
+**/.git
+**/.local
+**/.codex
+**/.agents
+**/.aws
+**/backups
+**/tests
+**/__tests__
+**/*.test.*
+**/*.spec.*
+**/*.log
+**/*.tsbuildinfo
+src/generated

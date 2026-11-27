@@ -1,0 +1,10 @@
+.sections { display: grid; gap: 20px; }
+.twoColumns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.logoRow { display: flex; align-items: center; gap: 24px; }
+.logoPreview { width: 112px; height: 112px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; color: #64748b; font-size: 42px; }
+.help { color: #64748b; font-size: 13px; line-height: 1.6; margin: 0 0 12px; }
+.help:last-child { margin-bottom: 0; }
+.notice { margin-bottom: 20px; }
+.days { display: flex; flex-wrap: wrap; gap: 10px 16px; }
+.fileInput { display: none; }
+@media (max-width: 640px) { .twoColumns { grid-template-columns: 1fr; gap: 0; } .logoRow { align-items: flex-start; flex-direction: column; gap: 16px; } }

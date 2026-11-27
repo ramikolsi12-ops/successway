@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SessionStatus {
+  PLANIFIEE
+  TERMINEE
+  ANNULEE
+  EN_COURS
+  ABSENT
+}
+
+enum PaymentMethod {
+  ESPECES
+  VIREMENT
+  CHEQUE
+  AUTRE
+}
+
+enum PricingSource {
+  HABITUEL
+  EXCEPTIONNEL
+}
+
+model AdminUser {
+  id             String     @id @default(uuid()) @db.Uuid
+  identifier     String     @unique @db.VarChar(100)
+  displayName    String     @default("Administrateur") @db.VarChar(150)
+  passwordHash   String
+  active         Boolean    @default(true)
+  sessionVersion Int        @default(1)
+  lastLoginAt    DateTime?  @db.Timestamptz(3)
+  createdAt      DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime   @updatedAt @db.Timestamptz(3)
+  auditLogs      AuditLog[]
+  payments       ProfessorPayment[]
+}
+
+model LoginAttempt {
+  identifier   String    @id @db.VarChar(100)
+  failures     Int       @default(0)
+  windowStart  DateTime  @default(now()) @db.Timestamptz(3)
+  blockedUntil DateTime? @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+}
+
+model Teacher {
+  id               String                   @id @default(uuid()) @db.Uuid
+  firstName        String                   @db.VarChar(100)
+  lastName         String                   @db.VarChar(100)
+  phone            String                   @db.VarChar(30)
+  email            String?                  @db.VarChar(254)
+  address          String?
+  notes            String?
+  active           Boolean                  @default(true)
+  registrationDate DateTime                 @default(now()) @db.Timestamptz(3)
+  createdAt        DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime                 @updatedAt @db.Timestamptz(3)
+  agreements       ProfessorRateAgreement[]
+  sessions         TeachingSession[]
+  charges          SessionCharge[]
+  payments         ProfessorPayment[]
+  schedules        RecurrenceSchedule[]
+
+  @@index([active, lastName, firstName])
+}
+
+model ProfessorRateAgreement {
+  id                      String            @id @default(uuid()) @db.Uuid
+  teacherId               String            @db.Uuid
+  pricePerSession         Decimal           @db.Decimal(14, 3)
+  expectedDurationMinutes Int?
+  startDate               DateTime          @db.Date
+  endDate                 DateTime?         @db.Date
+  active                  Boolean           @default(true)
+  notes                   String?
+  createdAt               DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime          @updatedAt @db.Timestamptz(3)
+  teacher                 Teacher           @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  sessions                TeachingSession[]
+  charges                 SessionCharge[]
+
+  @@index([teacherId, active, startDate])
+}
+
+model Classroom {
+  id          String            @id @default(uuid()) @db.Uuid
+  name        String            @unique @db.VarChar(100)
+  capacity    Int               @default(20)
+  description String?
+  active      Boolean           @default(true)
+  createdAt   DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime          @updatedAt @db.Timestamptz(3)
+  sessions    TeachingSession[]
+  schedules   RecurrenceSchedule[]
+}
+
+model RecurrenceSeries {
+  id          String            @id @default(uuid()) @db.Uuid
+  description String?
+  timezone    String            @default("Africa/Tunis")
+  active      Boolean           @default(true)
+  createdAt   DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime          @updatedAt @db.Timestamptz(3)
+  sessions    TeachingSession[]
+  schedules   RecurrenceSchedule[]
+}
+
+model RecurrenceSchedule {
+  id           String           @id @default(uuid()) @db.Uuid
+  recurrenceId String           @db.Uuid
+  teacherId    String           @db.Uuid
+  classroomId  String           @db.Uuid
+  weekday      Int
+  startMinute  Int
+  endMinute    Int
+  startDate    DateTime         @db.Date
+  endDate      DateTime?        @db.Date
+  supersededAt DateTime?        @db.Timestamptz(3)
+  notes        String?
+  createdAt    DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime         @updatedAt @db.Timestamptz(3)
+  recurrence   RecurrenceSeries @relation(fields: [recurrenceId], references: [id], onDelete: Restrict)
+  teacher      Teacher          @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  classroom    Classroom        @relation(fields: [classroomId], references: [id], onDelete: Restrict)
+
+  @@index([recurrenceId, startDate])
+  @@index([teacherId, startDate, endDate])
+  @@index([classroomId, startDate, endDate])
+}
+
+model TeachingSession {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  teacherId          String                  @db.Uuid
+  classroomId        String                  @db.Uuid
+  recurrenceId       String?                 @db.Uuid
+  occurrenceWeek     DateTime?               @db.Date
+  originalDate       DateTime?               @db.Date
+  isException        Boolean                 @default(false)
+  startAt            DateTime                @db.Timestamptz(3)
+  endAt              DateTime                @db.Timestamptz(3)
+  status             SessionStatus           @default(PLANIFIEE)
+  notes              String?
+  rateAgreementId    String?                 @db.Uuid
+  rateSnapshot       Decimal?                @db.Decimal(14, 3)
+  priceOverride      Decimal?                @db.Decimal(14, 3)
+  rateOverrideReason String?
+  completedAt        DateTime?               @db.Timestamptz(3)
+  startedAt          DateTime?               @db.Timestamptz(3)
+  absentAt           DateTime?               @db.Timestamptz(3)
+  cancelledAt        DateTime?               @db.Timestamptz(3)
+  createdAt          DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime                @updatedAt @db.Timestamptz(3)
+  teacher            Teacher                 @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  classroom          Classroom               @relation(fields: [classroomId], references: [id], onDelete: Restrict)
+  recurrence         RecurrenceSeries?       @relation(fields: [recurrenceId], references: [id], onDelete: Restrict)
+  rateAgreement      ProfessorRateAgreement? @relation(fields: [rateAgreementId], references: [id], onDelete: Restrict)
+  charge             SessionCharge?
+
+  @@index([startAt, status])
+  @@index([completedAt])
+  @@index([teacherId, startAt])
+  @@index([classroomId, startAt])
+  @@index([rateAgreementId])
+  @@index([recurrenceId])
+  @@unique([recurrenceId, occurrenceWeek])
+}
+
+model SessionCharge {
+  id              String                  @id @default(uuid()) @db.Uuid
+  teacherId       String                  @db.Uuid
+  sessionId       String                  @unique @db.Uuid
+  rateAgreementId String?                 @db.Uuid
+  amount          Decimal                 @db.Decimal(14, 3)
+  pricingSource   PricingSource           @default(HABITUEL)
+  chargedAt       DateTime                @db.Timestamptz(3)
+  voidedAt        DateTime?               @db.Timestamptz(3)
+  voidReason      String?
+  idempotencyKey  String                  @unique @db.VarChar(200)
+  createdAt       DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime                @updatedAt @db.Timestamptz(3)
+  teacher         Teacher                 @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  session         TeachingSession         @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  rateAgreement   ProfessorRateAgreement? @relation(fields: [rateAgreementId], references: [id], onDelete: Restrict)
+  allocations     PaymentAllocation[]
+
+  @@index([teacherId, chargedAt])
+  @@index([chargedAt])
+  @@index([rateAgreementId])
+}
+
+model ProfessorPayment {
+  id             String              @id @default(uuid()) @db.Uuid
+  teacherId      String              @db.Uuid
+  paymentDate    DateTime            @db.Date
+  amount         Decimal             @db.Decimal(14, 3)
+  method         PaymentMethod       @default(ESPECES)
+  reference      String?             @db.VarChar(200)
+  notes          String?
+  voidedAt       DateTime?           @db.Timestamptz(3)
+  voidReason     String?
+  idempotencyKey String              @unique @db.VarChar(200)
+  recordedById   String?             @db.Uuid
+  replacesId     String?             @unique @db.Uuid
+  createdAt      DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime            @updatedAt @db.Timestamptz(3)
+  teacher        Teacher             @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  allocations    PaymentAllocation[]
+  recordedBy     AdminUser?          @relation(fields: [recordedById], references: [id], onDelete: Restrict)
+  replaces       ProfessorPayment?   @relation("PaymentCorrections", fields: [replacesId], references: [id], onDelete: Restrict)
+  replacement    ProfessorPayment?   @relation("PaymentCorrections")
+
+  @@index([teacherId, paymentDate])
+  @@index([paymentDate])
+}
+
+model PaymentAllocation {
+  id             String           @id @default(uuid()) @db.Uuid
+  paymentId      String           @db.Uuid
+  chargeId       String           @db.Uuid
+  amount         Decimal          @db.Decimal(14, 3)
+  idempotencyKey String           @unique @db.VarChar(200)
+  voidedAt       DateTime?        @db.Timestamptz(3)
+  voidReason     String?
+  createdAt      DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @db.Timestamptz(3)
+  payment        ProfessorPayment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  charge         SessionCharge    @relation(fields: [chargeId], references: [id], onDelete: Restrict)
+
+  @@index([paymentId, voidedAt])
+  @@index([chargeId, voidedAt])
+}
+
+model AuditLog {
+  id         String     @id @default(uuid()) @db.Uuid
+  adminId    String?    @db.Uuid
+  action     String     @db.VarChar(100)
+  entityType String     @db.VarChar(100)
+  entityId   String     @db.VarChar(200)
+  reason     String?
+  before     Json?
+  after      Json?
+  createdAt  DateTime   @default(now()) @db.Timestamptz(3)
+  admin      AdminUser? @relation(fields: [adminId], references: [id], onDelete: Restrict)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([adminId, createdAt])
+}
+
+model AppSetting {
+  key       String   @id @db.VarChar(100)
+  value     Json
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+}

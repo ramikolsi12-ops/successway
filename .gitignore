@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+coverage/
+.vitest/
+src/generated/
+.env*
+!.env.example
+!.env.test.example
+.local/
+backups/
+*.tsbuildinfo
+*.log
