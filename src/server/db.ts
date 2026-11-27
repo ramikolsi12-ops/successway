@@ -7,7 +7,9 @@ export function createDatabaseClient(connectionString = process.env.DATABASE_URL
   if (!connectionString) throw new Error("DATABASE_URL est manquante. Exécutez scripts/Initialize-Local.ps1.");
   return new PrismaClient({
     adapter: new PrismaPg(createDatabasePool(databaseUrl(connectionString)), { disposeExternalPool: true }),
-    log: ["error"],
+    // Production routes report sanitized errors; Prisma's detailed diagnostic
+    // output can include query arguments and must remain a development aid.
+    log: process.env.NODE_ENV === "production" ? [] : ["error"],
   });
 }
 

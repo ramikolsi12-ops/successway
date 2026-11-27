@@ -1,0 +1,133 @@
+name: successway
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-tools: &tools
+  image: successway-tools:${APP_IMAGE_TAG:-production}
+  build:
+    context: .
+    target: tools
+  environment:
+    NODE_ENV: production
+    DATABASE_URL: ${DATABASE_URL:?Configurez DATABASE_URL dans .env.production}
+    TZ: Africa/Tunis
+    NEXT_TELEMETRY_DISABLED: "1"
+  networks:
+    - backend
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  read_only: true
+  tmpfs:
+    - /tmp:rw,nosuid,nodev,noexec,size=128m,uid=1001,gid=1001
+  logging: *logging
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Configurez POSTGRES_USER dans .env.production}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configurez POSTGRES_PASSWORD dans .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:?Configurez POSTGRES_DB dans .env.production}
+      TZ: Africa/Tunis
+    # Preserve the existing installation's session timezone/Prisma date semantics.
+    command: ["postgres", "-c", "timezone=Africa/Tunis"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+    security_opt:
+      - no-new-privileges:true
+    logging: *logging
+
+  migrate:
+    <<: *tools
+    restart: "no"
+    command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    image: successway-app:${APP_IMAGE_TAG:-production}
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+      DATABASE_URL: ${DATABASE_URL:?Configurez DATABASE_URL dans .env.production}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:?Configurez NEXTAUTH_URL dans .env.production}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?Configurez NEXTAUTH_SECRET dans .env.production}
+      TZ: Africa/Tunis
+      NEXT_TELEMETRY_DISABLED: "1"
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - web
+      - backend
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(4000)}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=64m,uid=1001,gid=1001
+      - /app/.next/cache:rw,nosuid,nodev,noexec,size=128m,uid=1001,gid=1001
+    stop_grace_period: 30s
+    logging: *logging
+
+  admin:
+    <<: *tools
+    profiles: ["tools"]
+    restart: "no"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?Configurez DATABASE_URL dans .env.production}
+      ADMIN_IDENTIFIER: ${ADMIN_IDENTIFIER:-administrateur}
+      TZ: Africa/Tunis
+      NEXT_TELEMETRY_DISABLED: "1"
+    command: ["node", "scripts/docker/init-admin.mjs"]
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+networks:
+  # A separate app interface allows the loopback publication to work on the
+  # host. PostgreSQL and the operations containers remain on backend only.
+  web:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres_data:

@@ -2,6 +2,8 @@
 
 Application locale d’administration d’un centre privé en Tunisie, en français. **Les professeurs paient le centre pour l’utilisation de ses salles.** Les montants sont exprimés en DT avec trois décimales et les horaires utilisent Africa/Tunis. Seul l’administrateur se connecte ; les professeurs sont des fiches de gestion.
 
+Le déploiement Docker de production sur Ubuntu est décrit dans [DEPLOYMENT.md](DEPLOYMENT.md), pour `gestion.successway.tn` et `/opt/successway`. Il utilise une configuration distincte du démarrage local ci-dessous.
+
 ## Démarrer sous Windows
 
 Prérequis : Node.js 22.12+ sur la branche 22, ou Node.js 24 ; npm ; Docker Desktop démarré en mode conteneurs Linux.

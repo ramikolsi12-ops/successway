@@ -19,9 +19,8 @@ COPY prisma/schema.prisma ./prisma/schema.prisma
 RUN npm ci --omit=peer --include=dev --include=optional \
     && npm cache clean --force
 
-FROM base AS build
+FROM deps AS build
 ENV NODE_ENV=production
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN mkdir -p public
 # Module validation runs during compilation. These public dummy values are
@@ -38,7 +37,7 @@ ENV NODE_ENV=production \
     HOME=/home/app
 COPY --chown=1001:1001 prisma ./prisma
 COPY --chown=1001:1001 tsconfig.json ./
-COPY --chown=1001:1001 scripts/docker ./scripts/docker
+COPY --chown=1001:1001 scripts/docker/init-admin.mjs ./scripts/docker/init-admin.mjs
 COPY --chown=1001:1001 src/lib/password.ts src/lib/business-error.ts ./src/lib/
 COPY --chown=1001:1001 src/validations/auth.ts src/validations/locale.ts ./src/validations/
 USER 1001:1001

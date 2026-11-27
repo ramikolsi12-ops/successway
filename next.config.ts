@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const config: NextConfig = {
   output: "standalone",
+  // Keep build workers bounded, leaving memory for PostgreSQL on the VPS.
+  experimental: { cpus: 2 },
   poweredByHeader: false,
   devIndicators: false,
   turbopack: { root: process.cwd() },

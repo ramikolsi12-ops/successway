@@ -1,6 +1,8 @@
 # Préparation de la phase 6 — déploiement
 
-Ce document prépare les décisions et vérifications du futur déploiement. La phase 6 n’est pas réalisée : aucune connexion à un serveur externe, aucun déploiement, aucune configuration Apache, DNS, certificat, tâche de sauvegarde ou pipeline final n’est effectué ici. La mise en production attend l’approbation du propriétaire après validation de la phase 5.
+Ce document conserve la checklist générale préparée en phase 5. La phase 6.2 fournit désormais le Dockerfile, le Compose de production, les contrôles de santé, l’initialisation administrateur et les commandes dans [DEPLOYMENT.md](../DEPLOYMENT.md). Les résultats locaux de cette étape sont consignés dans [VERIFICATION.md](VERIFICATION.md). Les points historiques ci-dessous doivent être lus avec cet état actualisé ; aucun accès au VPS, configuration Apache, certificat, sauvegarde externe ou pipeline n’a été réalisé pendant la préparation Docker.
+
+Le serveur communiqué est un Contabo Ubuntu 24.04 LTS, 4 vCPU, 8 Go de RAM, 100 Go SSD, Docker et Compose installés. Le domaine prévu est `gestion.successway.tn`, le répertoire `/opt/successway` et le fuseau `Africa/Tunis`. La configuration du reverse proxy HTTPS et les sauvegardes/restaurations restent des étapes distinctes avant ouverture publique.
 
 ## Serveur Ubuntu et ressources
 

@@ -19,11 +19,16 @@ describe("Protection HTTP avant les routes", () => {
     expect(page.status).toBe(307); expect(page.headers.get("location")).toBe("http://localhost:3000/connexion");
     expect((await proxy(new NextRequest("http://localhost:3000/api/settings/centre"))).status).toBe(401);
   });
-  it("rend seulement connexion, auth et logo public accessibles sans jeton", async () => {
-    for (const path of ["/connexion", "/api/auth/csrf", "/api/centre/logo"]) {
+  it("rend connexion, auth, logo et contrôle de santé accessibles sans jeton", async () => {
+    for (const path of ["/connexion", "/api/auth/csrf", "/api/centre/logo", "/api/health"]) {
       expect((await proxy(new NextRequest(`http://localhost:3000${path}`))).headers.get("x-middleware-next")).toBe("1");
     }
     expect(token).not.toHaveBeenCalled();
+  });
+  it("ne rend pas publics les chemins voisins du contrôle de santé", async () => {
+    for (const path of ["/api/health/details", "/api/health-debug", "/api/settings/centre"]) {
+      expect((await proxy(new NextRequest(`http://localhost:3000${path}`))).status).toBe(401);
+    }
   });
   it("génère un nonce nouveau, écrase les en-têtes fournis et interdit eval en production", async () => {
     const first = await proxy(new NextRequest("http://localhost:3000/connexion", { headers: { "x-nonce": "choisi", "content-security-policy": "choisie" } }));

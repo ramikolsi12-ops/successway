@@ -16,7 +16,7 @@ export async function proxy(request: NextRequest) {
   const next = () => NextResponse.next({ request: { headers: requestHeaders } });
   const path = request.nextUrl.pathname;
   let response: NextResponse;
-  if (path === "/connexion" || path.startsWith("/api/auth/") || path === "/api/centre/logo") response = next();
+  if (path === "/connexion" || path.startsWith("/api/auth/") || path === "/api/centre/logo" || path === "/api/health") response = next();
   else {
     const token = await getToken({ req: request, secret: environment.secret, secureCookie: environment.secureCookies });
     response = token ? next() : path.startsWith("/api/")

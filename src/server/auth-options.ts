@@ -22,7 +22,14 @@ export const authOptions: NextAuthOptions = {
       if (!process.env.NEXTAUTH_SECRET || process.env.NEXTAUTH_SECRET.length < 32) {
         throw new Error("Configuration d'authentification invalide.");
       }
-      return authenticateAdministrator(credentials);
+      try {
+        return await authenticateAdministrator(credentials);
+      } catch (error) {
+        // NextAuth includes authorize errors in its callback URL. Never let a
+        // database diagnostic or query argument become a public login error.
+        console.error("La vérification de connexion a échoué.", error instanceof Error ? error.name : "Erreur inconnue");
+        throw new Error("Le service de connexion est temporairement indisponible.");
+      }
     },
   })],
   events: {
